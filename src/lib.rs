@@ -14,14 +14,14 @@ pub struct Transaction {
     pub description: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum TxType {
     Deposit,
     Transfer,
     Withdrawal
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum TxStatus {
     Success,
     Failure,
@@ -32,7 +32,7 @@ pub enum TxStatus {
 pub enum ParseError {
     WrongFieldCount(u8),
     InvalidTxType(String),
-    InvalidStatus(String),
+    InvalidTxStatus(String),
     WrongNumber(std::num::ParseIntError)
 }
 
@@ -47,7 +47,7 @@ impl std::fmt::Display for ParseError {
         match self {
             Self::WrongFieldCount(n) => write!(f, "found {n} field instead of 8"),
             Self::InvalidTxType(t) => write!(f, "TX_TYPE is of the wrong format. Found {t} when only DEPOSIT, TRANSFER, WITHDRAWAL are allowed"),
-            Self::InvalidStatus(s) => write!(f, "TX_STATUS is of the wrong format. Found {s} when only SUCCESS, FAILURE, PENDING are allowed"),
+            Self::InvalidTxStatus(s) => write!(f, "TX_STATUS is of the wrong format. Found {s} when only SUCCESS, FAILURE, PENDING are allowed"),
             Self::WrongNumber(err) => write!(f, "error parsing a number {err}"),
         }
     }
@@ -96,16 +96,70 @@ pub fn parse_tx_status(s: &str) -> Result<TxStatus, ParseError> {
         "SUCCESS" => Ok(TxStatus::Success),
         "FAILURE" => Ok(TxStatus::Failure),
         "PENDING" => Ok(TxStatus::Pending),
-        _ => Err(ParseError::InvalidStatus(s.to_string()))
+        _ => Err(ParseError::InvalidTxStatus(s.to_string()))
     }
 }
 
 #[cfg(test)]
 mod tests {
 
-    #[test]
-    fn test_parse_one_csv_line() {
+    use super::*;
 
+    #[test]
+    fn test_parse_one_csv_line_correct() {
+        let line = r#"1001,DEPOSIT,0,501,50000,1672531200000,SUCCESS,"Initial account funding""#;
+        let tx = parse_csv_line(&line).expect("Valid CSV should pass");
+
+        assert_eq!(tx.tx_id, 1001);
+        assert_eq!(tx.tx_type, TxType::Deposit);
+        assert_eq!(tx.from_user_id, 0);
+        assert_eq!(tx.to_user_id, 501);
+        assert_eq!(tx.amount, 50000);
+        assert_eq!(tx.timestamp, 1672531200000);
+        assert_eq!(tx.status, TxStatus::Success);
+        assert_eq!(tx.description, "Initial account funding");
+    }
+
+    #[test]
+    fn test_parse_one_csv_line_tx_type_invalid() {
+        let line = r#"1001,INVALID,0,501,50000,1672531200000,SUCCESS,"Initial account funding""#;
+        let tx = parse_csv_line(&line);
+
+        match tx {
+            Err(ParseError::InvalidTxType(t)) => assert_eq!(t, "INVALID"),
+            _ => panic!("Expected InvalidTxType Error")
+        }
+    }
+
+    #[test]
+    fn test_parse_one_csv_line_tx_status_invalid() {
+        let line = r#"1001,DEPOSIT,0,501,50000,1672531200000,INVALID,"Initial account funding""#;
+        let tx = parse_csv_line(&line);
+
+        match tx {
+            Err(ParseError::InvalidTxStatus(t)) => assert_eq!(t, "INVALID"),
+            _ => panic!("Expected InvalidTxStatus Error")
+        }
+    }
+
+    #[test]
+    fn test_parse_one_csv_line_number_of_fields_invalid() {
+        let line = "1001,DEPOSIT,0";
+        let tx = parse_csv_line(&line);
+
+        match tx {
+            Err(ParseError::WrongFieldCount(n)) => assert_eq!(n, 3),
+            _ => panic!("Expected WrongFieldCount Error")
+        }
+    }
+
+    #[test]
+    fn test_parse_one_csv_line_parse_int_error() {
+        let line = r#"abc,DEPOSIT,0,501,50000,1672531200000,SUCCESS,"Initial account funding""#;
+
+        let tx = parse_csv_line(line);
+
+        assert!(matches!(tx, Err(ParseError::WrongNumber(_))));
     }
 
 }
