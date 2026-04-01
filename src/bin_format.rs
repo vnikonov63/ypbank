@@ -1,7 +1,7 @@
-use crate::{Transaction, TxStatus, TxType, Storage};
 use crate::errors::BinError;
+use crate::{Storage, Transaction, TxStatus, TxType};
 
-impl Storage { 
+impl Storage {
     pub fn from_bin<R: std::io::Read>(r: &mut R) -> Result<Self, BinError> {
         todo!()
     }

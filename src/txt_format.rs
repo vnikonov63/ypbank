@@ -1,7 +1,7 @@
-use crate::errors::{TxtError};
-use crate::{Transaction, TxType, TxStatus, Storage};
+use crate::errors::TxtError;
+use crate::{Storage, Transaction, TxStatus, TxType};
 
-impl Storage { 
+impl Storage {
     pub fn from_txt<R: std::io::Read>(r: &mut R) -> Result<Self, TxtError> {
         todo!()
     }

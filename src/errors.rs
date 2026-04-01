@@ -3,7 +3,7 @@ pub enum ParseError {
     WrongFieldCount(u8),
     InvalidTxType(String),
     InvalidTxStatus(String),
-    WrongNumber(std::num::ParseIntError)
+    WrongNumber(std::num::ParseIntError),
 }
 
 impl From<std::num::ParseIntError> for ParseError {
@@ -16,8 +16,14 @@ impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::WrongFieldCount(n) => write!(f, "found {n} field instead of 8"),
-            Self::InvalidTxType(t) => write!(f, "TX_TYPE is of the wrong format. Found {t} when only DEPOSIT, TRANSFER, WITHDRAWAL are allowed"),
-            Self::InvalidTxStatus(s) => write!(f, "TX_STATUS is of the wrong format. Found {s} when only SUCCESS, FAILURE, PENDING are allowed"),
+            Self::InvalidTxType(t) => write!(
+                f,
+                "TX_TYPE is of the wrong format. Found {t} when only DEPOSIT, TRANSFER, WITHDRAWAL are allowed"
+            ),
+            Self::InvalidTxStatus(s) => write!(
+                f,
+                "TX_STATUS is of the wrong format. Found {s} when only SUCCESS, FAILURE, PENDING are allowed"
+            ),
             Self::WrongNumber(err) => write!(f, "error parsing a number {err}"),
         }
     }
@@ -27,7 +33,7 @@ impl std::error::Error for ParseError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Self::WrongNumber(err) => Some(err),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -36,8 +42,8 @@ impl std::error::Error for ParseError {
 #[derive(Debug)]
 pub enum CSVError {
     Io(std::io::Error),
-    InvalidHeader(String),
-    Parse(ParseError)
+    InvalidHeader,
+    Parse(ParseError),
 }
 
 impl From<std::io::Error> for CSVError {
@@ -55,9 +61,9 @@ impl From<ParseError> for CSVError {
 impl std::fmt::Display for CSVError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::InvalidHeader(s) => write!(f, "wrong csv header"),
+            Self::InvalidHeader => write!(f, "wrong csv header"),
             Self::Io(err) => write!(f, "error reading and writing {err}"),
-            Self::Parse(err) => write!(f, "{err}")
+            Self::Parse(err) => write!(f, "{err}"),
         }
     }
 }
@@ -67,17 +73,15 @@ impl std::error::Error for CSVError {
         match self {
             Self::Io(err) => Some(err),
             Self::Parse(err) => Some(err),
-            _ => None
+            _ => None,
         }
     }
 }
 
 /* ------------------------------------------------------------ */
 #[derive(Debug)]
-pub enum BinError {
-}
+pub enum BinError {}
 
 /* ------------------------------------------------------------ */
 #[derive(Debug)]
-pub enum TxtError {
-}
+pub enum TxtError {}

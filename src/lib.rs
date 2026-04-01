@@ -1,9 +1,11 @@
-pub mod errors;
-pub mod csv_format;
+use std::ffi::os_str::Display;
+
 pub mod bin_format;
+pub mod csv_format;
+pub mod errors;
 pub mod txt_format;
 pub struct Storage {
-    pub transactions: Vec<Transaction>
+    pub transactions: Vec<Transaction>,
 }
 
 #[derive(Debug)]
@@ -22,7 +24,17 @@ pub struct Transaction {
 pub enum TxType {
     Deposit,
     Transfer,
-    Withdrawal
+    Withdrawal,
+}
+
+impl std::fmt::Display for TxType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            TxType::Deposit => write!(f, "DEPOSIT"),
+            TxType::Transfer => write!(f, "TRANSFER"),
+            TxType::Withdrawal => write!(f, "WITHDRAWAL"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -30,4 +42,14 @@ pub enum TxStatus {
     Success,
     Failure,
     Pending,
+}
+
+impl std::fmt::Display for TxStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            TxStatus::Success => write!(f, "SUCCESS"),
+            TxStatus::Failure => write!(f, "FAILURE"),
+            TxStatus::Pending => write!(f, "PENDING"),
+        }
+    }
 }

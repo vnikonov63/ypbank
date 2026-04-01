@@ -1,19 +1,23 @@
 use std::io::{BufRead, BufReader};
 
 use crate::errors::{CSVError, ParseError};
-use crate::{Transaction, TxType, TxStatus, Storage};
+use crate::{Storage, Transaction, TxStatus, TxType};
 
-const CSV_HEADER: &str = "TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION";
+const CSV_HEADER: &str =
+    "TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION";
 
-impl Storage { 
-    pub fn from_csv<R: std::io::Read>(r: &mut R) -> Result<Self, CSVError> {
+impl Storage {
+    pub fn from_csv<R: std::io::Read>(reader: &mut R) -> Result<Self, CSVError> {
         let mut transactions = Vec::new();
-        let f = BufReader::new(r);
+        let f = BufReader::new(reader);
 
         for (i, line) in f.lines().enumerate() {
             let line_result = line?;
-            if i == 0 && line_result.trim_matches(|c| c == '\n' || c == '\r') != CSV_HEADER {
-                return Err(CSVError::InvalidHeader(line_result));
+            if i == 0 {
+                if line_result.trim_matches(|c| c == '\n' || c == '\r') != CSV_HEADER {
+                    return Err(CSVError::InvalidHeader);
+                }
+                continue;
             }
 
             if line_result.trim().is_empty() {
@@ -27,15 +31,31 @@ impl Storage {
         Ok(Self { transactions })
     }
 
-    pub fn to_csv<W: std::io::Write>(&self, writer: &mut W) -> Result<Self, CSVError> {
-        todo!()
+    pub fn to_csv<W: std::io::Write>(&self, writer: &mut W) -> Result<(), CSVError> {
+        writeln!(writer, "{CSV_HEADER}")?;
+        for tx in &self.transactions {
+            writeln!(
+                writer,
+                "{},{},{},{},{},{},{},\"{}\"",
+                tx.tx_id,
+                tx.tx_type,
+                tx.from_user_id,
+                tx.to_user_id,
+                tx.amount,
+                tx.timestamp,
+                tx.status,
+                tx.description
+            )?;
+        }
+        writer.flush()?;
+        Ok(())
     }
 }
 
 pub fn parse_csv_line(line: &str) -> Result<Transaction, ParseError> {
     let bits: Vec<&str> = line.split(',').collect();
     if bits.len() != 8 {
-        return Err(ParseError::WrongFieldCount(bits.len() as u8))
+        return Err(ParseError::WrongFieldCount(bits.len() as u8));
     }
 
     let transaction = Transaction {
@@ -46,7 +66,7 @@ pub fn parse_csv_line(line: &str) -> Result<Transaction, ParseError> {
         amount: bits[4].parse()?,
         timestamp: bits[5].parse()?,
         status: parse_tx_status(bits[6])?,
-        description: bits[7].trim_matches('"').to_string()
+        description: bits[7].trim_matches('"').to_string(),
     };
 
     Ok(transaction)
@@ -66,7 +86,7 @@ pub fn parse_tx_status(s: &str) -> Result<TxStatus, ParseError> {
         "SUCCESS" => Ok(TxStatus::Success),
         "FAILURE" => Ok(TxStatus::Failure),
         "PENDING" => Ok(TxStatus::Pending),
-        _ => Err(ParseError::InvalidTxStatus(s.to_string()))
+        _ => Err(ParseError::InvalidTxStatus(s.to_string())),
     }
 }
 
@@ -74,6 +94,7 @@ pub fn parse_tx_status(s: &str) -> Result<TxStatus, ParseError> {
 mod tests {
 
     use super::*;
+    use std::io::{Cursor, Read, Write};
 
     #[test]
     fn test_parse_one_csv_line_correct() {
@@ -97,7 +118,7 @@ mod tests {
 
         match tx {
             Err(ParseError::InvalidTxType(t)) => assert_eq!(t, "INVALID"),
-            _ => panic!("Expected InvalidTxType Error")
+            _ => panic!("Expected InvalidTxType Error"),
         }
     }
 
@@ -108,7 +129,7 @@ mod tests {
 
         match tx {
             Err(ParseError::InvalidTxStatus(t)) => assert_eq!(t, "INVALID"),
-            _ => panic!("Expected InvalidTxStatus Error")
+            _ => panic!("Expected InvalidTxStatus Error"),
         }
     }
 
@@ -119,7 +140,7 @@ mod tests {
 
         match tx {
             Err(ParseError::WrongFieldCount(n)) => assert_eq!(n, 3),
-            _ => panic!("Expected WrongFieldCount Error")
+            _ => panic!("Expected WrongFieldCount Error"),
         }
     }
 
@@ -132,4 +153,111 @@ mod tests {
         assert!(matches!(tx, Err(ParseError::WrongNumber(_))));
     }
 
+    #[test]
+    fn test_from_csv_wrong_header() {
+        let mut buffer = Cursor::new(Vec::new());
+        writeln!(buffer, "TX_ID,TX_TYPE,FROM_USER_ID")
+            .expect("Should be able to write to a Cursor virtual stream");
+        writeln!(
+            buffer,
+            r#"1001,DEPOSIT,0,501,50000,1672531200000,SUCCESS,"Initial account funding""#
+        )
+        .unwrap();
+
+        buffer.set_position(0);
+
+        let storage = Storage::from_csv(&mut buffer);
+
+        assert!(matches!(storage, Err(CSVError::InvalidHeader)));
+    }
+
+    #[test]
+    fn test_from_csv_multi_line_correct() {
+        let mut buffer = Cursor::new(Vec::new());
+        writeln!(
+            buffer,
+            "TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION"
+        )
+        .expect("Should be able to write to a Cursor virtual stream");
+        writeln!(
+            buffer,
+            r#"1001,DEPOSIT,0,501,50000,1672531200000,SUCCESS,"Initial account funding""#
+        )
+        .unwrap();
+        writeln!(
+            buffer,
+            r#"1003,WITHDRAWAL,502,0,1000,1672538400000,PENDING,"ATM withdrawal""#
+        )
+        .unwrap();
+
+        buffer.set_position(0);
+
+        let storage = Storage::from_csv(&mut buffer).expect("valid CSV must be read");
+
+        assert_eq!(storage.transactions.len(), 2);
+
+        let tx1 = &storage.transactions[0];
+        assert_eq!(tx1.tx_id, 1001);
+        assert_eq!(tx1.tx_type, TxType::Deposit);
+        assert_eq!(tx1.from_user_id, 0);
+        assert_eq!(tx1.to_user_id, 501);
+        assert_eq!(tx1.amount, 50000);
+        assert_eq!(tx1.timestamp, 1672531200000);
+        assert_eq!(tx1.status, TxStatus::Success);
+        assert_eq!(tx1.description, "Initial account funding");
+
+        let tx2 = &storage.transactions[1];
+        assert_eq!(tx2.tx_id, 1003);
+        assert_eq!(tx2.tx_type, TxType::Withdrawal);
+        assert_eq!(tx2.from_user_id, 502);
+        assert_eq!(tx2.to_user_id, 0);
+        assert_eq!(tx2.amount, 1000);
+        assert_eq!(tx2.timestamp, 1672538400000);
+        assert_eq!(tx2.status, TxStatus::Pending);
+        assert_eq!(tx2.description, "ATM withdrawal");
+    }
+
+    #[test]
+    fn to_csv_correct() {
+        let storage = Storage {
+            transactions: vec![
+                Transaction {
+                    tx_id: 1001,
+                    tx_type: TxType::Deposit,
+                    from_user_id: 0,
+                    to_user_id: 501,
+                    amount: 50000,
+                    timestamp: 1672531200000,
+                    status: TxStatus::Success,
+                    description: "Initial account funding".to_string(),
+                },
+                Transaction {
+                    tx_id: 1003,
+                    tx_type: TxType::Withdrawal,
+                    from_user_id: 502,
+                    to_user_id: 0,
+                    amount: 1000,
+                    timestamp: 1672538400000,
+                    status: TxStatus::Pending,
+                    description: "ATM withdrawal".to_string(),
+                },
+            ],
+        };
+
+        let mut buffer = Cursor::new(Vec::new());
+        storage
+            .to_csv(&mut buffer)
+            .expect("valid CSV must be writen");
+
+        let bytes = buffer.into_inner();
+        let actual = String::from_utf8(bytes).expect("output must be valid utf-8");
+
+        let expected = concat!(
+            "TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION\n",
+            "1001,DEPOSIT,0,501,50000,1672531200000,SUCCESS,\"Initial account funding\"\n",
+            "1003,WITHDRAWAL,502,0,1000,1672538400000,PENDING,\"ATM withdrawal\"\n"
+        );
+
+        assert_eq!(actual, expected);
+    }
 }
