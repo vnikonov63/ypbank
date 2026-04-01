@@ -4,6 +4,9 @@ pub enum ParseError {
     InvalidTxType(String),
     InvalidTxStatus(String),
     WrongNumber(std::num::ParseIntError),
+    WrongDelimeterFormat,
+    WrongFieldName(String),
+    MissingField(String),
 }
 
 impl From<std::num::ParseIntError> for ParseError {
@@ -25,6 +28,9 @@ impl std::fmt::Display for ParseError {
                 "TX_STATUS is of the wrong format. Found {s} when only SUCCESS, FAILURE, PENDING are allowed"
             ),
             Self::WrongNumber(err) => write!(f, "error parsing a number {err}"),
+            Self::WrongDelimeterFormat => write!(f, "error with parsing a text line with delimter as a cause"),
+            Self::WrongFieldName(n) => write!(f, "error with parsing a transaction text block, encountered an unknown name {n}"),
+            Self::MissingField(n) => write!(f, "field {n} is missing"),
         }
     }
 }

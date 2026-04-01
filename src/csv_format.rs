@@ -1,13 +1,19 @@
 use std::io::{BufRead, BufReader};
 
 use crate::errors::{CSVError, ParseError};
-use crate::{Storage, Transaction, TxStatus, TxType};
+use crate::{Storage, Transaction, parse_tx_status, parse_tx_type, TxStatus, TxType};
 
 const CSV_HEADER: &str =
     "TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION";
 
 impl Storage {
-    pub fn from_csv<R: std::io::Read>(reader: &mut R) -> Result<Self, CSVError> {
+
+    /* --------!!!IMPORTANT MEMORY MOMENT!!!----------
+    // this could be writen as 
+    pub fn from_csv<R: std::io::Read>(reader: &mut R) -> Result<Self, CSVError>
+    // with Trait Bound Syntx and also using syntactic sugar as below */
+
+    pub fn from_csv(reader: &mut impl std::io::Read) -> Result<Self, CSVError> {
         let mut transactions = Vec::new();
         let f = BufReader::new(reader);
 
@@ -70,24 +76,6 @@ pub fn parse_csv_line(line: &str) -> Result<Transaction, ParseError> {
     };
 
     Ok(transaction)
-}
-
-pub fn parse_tx_type(s: &str) -> Result<TxType, ParseError> {
-    match s {
-        "DEPOSIT" => Ok(TxType::Deposit),
-        "TRANSFER" => Ok(TxType::Transfer),
-        "WITHDRAWAL" => Ok(TxType::Withdrawal),
-        _ => Err(ParseError::InvalidTxType(s.to_string())),
-    }
-}
-
-pub fn parse_tx_status(s: &str) -> Result<TxStatus, ParseError> {
-    match s {
-        "SUCCESS" => Ok(TxStatus::Success),
-        "FAILURE" => Ok(TxStatus::Failure),
-        "PENDING" => Ok(TxStatus::Pending),
-        _ => Err(ParseError::InvalidTxStatus(s.to_string())),
-    }
 }
 
 #[cfg(test)]

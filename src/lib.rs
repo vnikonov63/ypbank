@@ -1,4 +1,4 @@
-use std::ffi::os_str::Display;
+use crate::errors::ParseError;
 
 pub mod bin_format;
 pub mod csv_format;
@@ -27,6 +27,15 @@ pub enum TxType {
     Withdrawal,
 }
 
+pub fn parse_tx_type(s: &str) -> Result<TxType, ParseError> {
+    match s {
+        "DEPOSIT" => Ok(TxType::Deposit),
+        "TRANSFER" => Ok(TxType::Transfer),
+        "WITHDRAWAL" => Ok(TxType::Withdrawal),
+        _ => Err(ParseError::InvalidTxType(s.to_string())),
+    }
+}
+
 impl std::fmt::Display for TxType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
@@ -51,5 +60,14 @@ impl std::fmt::Display for TxStatus {
             TxStatus::Failure => write!(f, "FAILURE"),
             TxStatus::Pending => write!(f, "PENDING"),
         }
+    }
+}
+
+pub fn parse_tx_status(s: &str) -> Result<TxStatus, ParseError> {
+    match s {
+        "SUCCESS" => Ok(TxStatus::Success),
+        "FAILURE" => Ok(TxStatus::Failure),
+        "PENDING" => Ok(TxStatus::Pending),
+        _ => Err(ParseError::InvalidTxStatus(s.to_string())),
     }
 }
