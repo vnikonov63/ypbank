@@ -28,8 +28,13 @@ impl std::fmt::Display for ParseError {
                 "TX_STATUS is of the wrong format. Found {s} when only SUCCESS, FAILURE, PENDING are allowed"
             ),
             Self::WrongNumber(err) => write!(f, "error parsing a number {err}"),
-            Self::WrongDelimeterFormat => write!(f, "error with parsing a text line with delimter as a cause"),
-            Self::WrongFieldName(n) => write!(f, "error with parsing a transaction text block, encountered an unknown name {n}"),
+            Self::WrongDelimeterFormat => {
+                write!(f, "error with parsing a text line with delimter as a cause")
+            }
+            Self::WrongFieldName(n) => write!(
+                f,
+                "error with parsing a transaction text block, encountered an unknown name {n}"
+            ),
             Self::MissingField(n) => write!(f, "field {n} is missing"),
         }
     }
@@ -90,4 +95,42 @@ pub enum BinError {}
 
 /* ------------------------------------------------------------ */
 #[derive(Debug)]
-pub enum TxtError {}
+pub enum TxtError {
+    Io(std::io::Error),
+    Parse(ParseError),
+    DoubleSpaceBetweenEntities,
+}
+
+impl From<std::io::Error> for TxtError {
+    fn from(from: std::io::Error) -> TxtError {
+        TxtError::Io(from)
+    }
+}
+
+impl From<ParseError> for TxtError {
+    fn from(from: ParseError) -> TxtError {
+        TxtError::Parse(from)
+    }
+}
+
+impl std::fmt::Display for TxtError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::DoubleSpaceBetweenEntities => {
+                write!(f, "double space between transactions, only one is allowed")
+            }
+            Self::Io(err) => write!(f, "error reading and writing {err}"),
+            Self::Parse(err) => write!(f, "{err}"),
+        }
+    }
+}
+
+impl std::error::Error for TxtError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Io(err) => Some(err),
+            Self::Parse(err) => Some(err),
+            _ => None,
+        }
+    }
+}

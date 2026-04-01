@@ -1,15 +1,14 @@
 use std::io::{BufRead, BufReader};
 
 use crate::errors::{CSVError, ParseError};
-use crate::{Storage, Transaction, parse_tx_status, parse_tx_type, TxStatus, TxType};
+use crate::{Storage, Transaction, TxStatus, TxType, parse_tx_status, parse_tx_type};
 
 const CSV_HEADER: &str =
     "TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION";
 
 impl Storage {
-
     /* --------!!!IMPORTANT MEMORY MOMENT!!!----------
-    // this could be writen as 
+    // this could be writen as
     pub fn from_csv<R: std::io::Read>(reader: &mut R) -> Result<Self, CSVError>
     // with Trait Bound Syntx and also using syntactic sugar as below */
 
@@ -160,7 +159,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_csv_multi_line_correct() {
+    fn test_from_csv_correct() {
         let mut buffer = Cursor::new(Vec::new());
         writeln!(
             buffer,
@@ -206,7 +205,7 @@ mod tests {
     }
 
     #[test]
-    fn to_csv_correct() {
+    fn test_to_csv_correct() {
         let storage = Storage {
             transactions: vec![
                 Transaction {
