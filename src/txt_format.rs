@@ -26,9 +26,15 @@ impl Storage {
                 } else {
                     return Err(TxtError::DoubleSpaceBetweenEntities);
                 }
+                continue;
             }
 
             current_block.push(line_result.to_string());
+        }
+
+        if !current_block.is_empty() {
+            let entity = current_block.iter().map(|s| s.as_str()).collect();
+            transactions.push(parse_txt_entity(&entity)?);
         }
 
         Ok(Self { transactions })
@@ -58,6 +64,10 @@ pub fn parse_txt_entity(lines: &Vec<&str>) -> Result<Transaction, ParseError> {
     let mut description: Option<String> = None;
 
     for line in lines {
+        if line.starts_with('#') {
+            continue;
+        }
+
         let (key, value) = parse_txt_line(line)?;
 
         match key {
@@ -118,6 +128,7 @@ mod tests {
     #[test]
     fn test_parse_txt_entity_correct() {
         let input: Vec<&str> = vec![
+            "# Record 1 (Deposit)",
             "STATUS: SUCCESS",
             r#"DESCRIPTION: "Terminal deposit""#,
             "TO_USER_ID: 9876543210987654",
@@ -179,7 +190,79 @@ mod tests {
     }
 
     #[test]
-    fn test_from_txt_correct() {}
+    fn test_from_txt_correct() {
+        let mut buffer = Cursor::new(Vec::new());
+
+        let s = concat!(
+            "# Record 1 (Deposit)\n",
+            "TX_ID: 1234567890123456\n",
+            "TX_TYPE: DEPOSIT\n",
+            "FROM_USER_ID: 0\n",
+            "TO_USER_ID: 9876543210987654\n",
+            "AMOUNT: 10000\n",
+            "TIMESTAMP: 1633036800000\n",
+            "STATUS: SUCCESS\n",
+            "DESCRIPTION: \"Terminal deposit\"\n",
+            "\n",
+            "# Record 2 (Transfer)\n",
+            "TX_ID: 2312321321321321\n",
+            "TIMESTAMP: 1633056800000\n",
+            "STATUS: FAILURE\n",
+            "TX_TYPE: TRANSFER\n",
+            "FROM_USER_ID: 1231231231231231\n",
+            "TO_USER_ID: 9876543210987654\n",
+            "AMOUNT: 1000\n",
+            "DESCRIPTION: \"User transfer\"\n",
+            "\n",
+            "# Record 3 (Withdrawal)\n",
+            "TX_ID: 3213213213213213\n",
+            "AMOUNT: 100\n",
+            "TX_TYPE: WITHDRAWAL\n",
+            "FROM_USER_ID: 9876543210987654\n",
+            "TO_USER_ID: 0\n",
+            "TIMESTAMP: 1633066800000\n",
+            "STATUS: SUCCESS\n",
+            "DESCRIPTION: \"User withdrawal\"\n",
+        );
+
+        write!(buffer, "{}", s).unwrap();
+
+        buffer.set_position(0);
+
+        let storage = Storage::from_txt(&mut buffer).expect("valid text should be read");
+
+        assert_eq!(storage.transactions.len(), 3);
+
+        let tx1 = &storage.transactions[0];
+        assert_eq!(tx1.tx_id, 1234567890123456);
+        assert_eq!(tx1.tx_type, TxType::Deposit);
+        assert_eq!(tx1.from_user_id, 0);
+        assert_eq!(tx1.to_user_id, 9876543210987654);
+        assert_eq!(tx1.amount, 10000);
+        assert_eq!(tx1.timestamp, 1633036800000);
+        assert_eq!(tx1.status, TxStatus::Success);
+        assert_eq!(tx1.description, "Terminal deposit");
+
+        let tx2 = &storage.transactions[1];
+        assert_eq!(tx2.tx_id, 2312321321321321);
+        assert_eq!(tx2.tx_type, TxType::Transfer);
+        assert_eq!(tx2.from_user_id, 1231231231231231);
+        assert_eq!(tx2.to_user_id, 9876543210987654);
+        assert_eq!(tx2.amount, 1000);
+        assert_eq!(tx2.timestamp, 1633056800000);
+        assert_eq!(tx2.status, TxStatus::Failure);
+        assert_eq!(tx2.description, "User transfer");
+
+        let tx3 = &storage.transactions[2];
+        assert_eq!(tx3.tx_id, 3213213213213213);
+        assert_eq!(tx3.tx_type, TxType::Withdrawal);
+        assert_eq!(tx3.from_user_id, 9876543210987654);
+        assert_eq!(tx3.to_user_id, 0);
+        assert_eq!(tx3.amount, 100);
+        assert_eq!(tx3.timestamp, 1633066800000);
+        assert_eq!(tx3.status, TxStatus::Success);
+        assert_eq!(tx3.description, "User withdrawal");
+    }
 
     #[test]
     fn test_to_txt_correct() {}
