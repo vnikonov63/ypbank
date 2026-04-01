@@ -32,6 +32,7 @@ impl std::error::Error for ParseError {
     }
 }
 
+/* ------------------------------------------------------------ */
 #[derive(Debug)]
 pub enum CSVError {
     Io(std::io::Error),
@@ -69,4 +70,14 @@ impl std::error::Error for CSVError {
             _ => None
         }
     }
+}
+
+/* ------------------------------------------------------------ */
+#[derive(Debug)]
+pub enum BinError {
+}
+
+/* ------------------------------------------------------------ */
+#[derive(Debug)]
+pub enum TxtError {
 }

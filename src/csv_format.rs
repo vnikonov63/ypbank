@@ -1,5 +1,15 @@
-use crate::errors::ParseError;
-use crate::{Transaction, TxType, TxStatus};
+use crate::errors::{CSVError, ParseError};
+use crate::{Transaction, TxType, TxStatus, Storage};
+
+impl Storage { 
+    pub fn from_csv<R: std::io::Read>(r: &mut R) -> Result<Self, CSVError> {
+        todo!()
+    }
+
+    pub fn to_csv<W: std::io::Write>(&self, writer: &mut W) -> Result<Self, CSVError> {
+        todo!()
+    }
+}
 
 pub fn parse_csv_line(line: &str) -> Result<Transaction, ParseError> {
     let bits: Vec<&str> = line.split(',').collect();
