@@ -1,9 +1,30 @@
+use std::io::{BufRead, BufReader};
+
 use crate::errors::{CSVError, ParseError};
 use crate::{Transaction, TxType, TxStatus, Storage};
 
+const CSV_HEADER: &str = "TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION";
+
 impl Storage { 
     pub fn from_csv<R: std::io::Read>(r: &mut R) -> Result<Self, CSVError> {
-        todo!()
+        let mut transactions = Vec::new();
+        let f = BufReader::new(r);
+
+        for (i, line) in f.lines().enumerate() {
+            let line_result = line?;
+            if i == 0 && line_result.trim_matches(|c| c == '\n' || c == '\r') != CSV_HEADER {
+                return Err(CSVError::InvalidHeader(line_result));
+            }
+
+            if line_result.trim().is_empty() {
+                continue;
+            }
+
+            let tx = parse_csv_line(&line_result)?;
+            transactions.push(tx);
+        }
+
+        Ok(Self { transactions })
     }
 
     pub fn to_csv<W: std::io::Write>(&self, writer: &mut W) -> Result<Self, CSVError> {
