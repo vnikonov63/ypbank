@@ -1,11 +1,42 @@
-use std::io::Read;
+use std::io::{BufReader, ErrorKind, Read};
 
 use crate::errors::{BinError, ParseError};
 use crate::{Storage, Transaction, TxStatus, TxType};
 
 impl Storage {
     pub fn from_bin(reader: &mut impl std::io::Read) -> Result<Self, BinError> {
-        todo!()
+        let mut transactions = Vec::new();
+        let mut entity = Vec::new();
+        let mut f = BufReader::new(reader);
+
+        loop {
+            let mut header = [0u8; 8];
+            match f.read_exact(&mut header) {
+                Ok(()) => {}
+                Err(err) => {
+                    if err.kind() == ErrorKind::UnexpectedEof {
+                        break;
+                    }
+                    return Err(BinError::Io(err.into()));
+                }
+            }
+
+            let magic = &header[0..4];
+            if magic != b"YPBN" {
+                return Err(BinError::InvalidMagic(
+                    magic.iter().map(|&b| b as char).collect::<String>(),
+                ));
+            }
+            let entity_size_bin = &header[4..8];
+            let entity_size = u32::from_be_bytes([header[4], header[5], header[6], header[7]]);
+
+            entity.resize(entity_size as usize, 0);
+            f.read_exact(&mut entity)?;
+
+            transactions.push(parse_bin_entity(&entity)?);
+        }
+
+        Ok(Self { transactions })
     }
 
     pub fn to_bin(&self, writer: &mut impl std::io::Write) -> Result<Self, BinError> {

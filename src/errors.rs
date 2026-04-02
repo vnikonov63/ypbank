@@ -106,7 +106,43 @@ impl std::error::Error for CSVError {
 
 /* ------------------------------------------------------------ */
 #[derive(Debug)]
-pub enum BinError {}
+pub enum BinError {
+    Io(std::io::Error),
+    Parse(ParseError),
+    InvalidMagic(String),
+}
+
+impl From<std::io::Error> for BinError {
+    fn from(from: std::io::Error) -> BinError {
+        BinError::Io(from)
+    }
+}
+
+impl From<ParseError> for BinError {
+    fn from(from: ParseError) -> BinError {
+        BinError::Parse(from)
+    }
+}
+
+impl std::fmt::Display for BinError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Io(err) => write!(f, "error reading and writing {err}"),
+            Self::Parse(err) => write!(f, "{err}"),
+            Self::InvalidMagic(s) => write!(f, "one of the headers contains an invalid magic {s}"),
+        }
+    }
+}
+
+impl std::error::Error for BinError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Io(err) => Some(err),
+            Self::Parse(err) => Some(err),
+            _ => None,
+        }
+    }
+}
 
 /* ------------------------------------------------------------ */
 #[derive(Debug)]
