@@ -20,7 +20,7 @@ pub struct Transaction {
     pub description: String,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum TxType {
     Deposit,
     Transfer,
@@ -46,7 +46,7 @@ impl std::fmt::Display for TxType {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum TxStatus {
     Success,
     Failure,

@@ -38,8 +38,35 @@ impl Storage {
         Ok(Self { transactions })
     }
 
-    pub fn to_bin(&self, writer: &mut impl std::io::Write) -> Result<Self, BinError> {
-        todo!()
+    pub fn to_bin(&self, writer: &mut impl std::io::Write) -> Result<(), BinError> {
+        for tx in &self.transactions {
+            let tx_id = tx.tx_id;
+            let tx_type = tx_type_to_u8(tx.tx_type);
+            let from_user_id = tx.from_user_id;
+            let to_user_id = tx.to_user_id;
+            let amount = tx.amount;
+            let timestamp = tx.timestamp;
+            let status = tx_status_to_u8(tx.status);
+            let description = tx.description.as_bytes();
+            let desc_len = description.len() as u32;
+
+            let entity_size = 46 + desc_len;
+
+            writer.write_all(b"YPBN")?;
+            writer.write_all(&entity_size.to_be_bytes())?;
+            writer.write_all(&tx_id.to_be_bytes())?;
+            writer.write_all(&[tx_type])?;
+            writer.write_all(&from_user_id.to_be_bytes())?;
+            writer.write_all(&to_user_id.to_be_bytes())?;
+            writer.write_all(&amount.to_be_bytes())?;
+            writer.write_all(&timestamp.to_be_bytes())?;
+            writer.write_all(&[status])?;
+            writer.write_all(&desc_len.to_be_bytes())?;
+            writer.write_all(description)?;
+        }
+
+        writer.flush()?;
+        Ok(())
     }
 }
 
@@ -139,6 +166,22 @@ fn parse_fx_status_bin(s: u8) -> Result<TxStatus, ParseError> {
         1 => Ok(TxStatus::Failure),
         2 => Ok(TxStatus::Pending),
         _ => Err(ParseError::InvalidTxStatus(s.to_string())),
+    }
+}
+
+fn tx_type_to_u8(t: TxType) -> u8 {
+    match t {
+        TxType::Deposit => 0,
+        TxType::Transfer => 1,
+        TxType::Withdrawal => 2,
+    }
+}
+
+fn tx_status_to_u8(s: TxStatus) -> u8 {
+    match s {
+        TxStatus::Success => 0,
+        TxStatus::Failure => 1,
+        TxStatus::Pending => 2,
     }
 }
 
@@ -301,5 +344,76 @@ mod tests {
         assert_eq!(storage.transactions[2].timestamp, timestamp3);
         assert_eq!(storage.transactions[2].status, TxStatus::Success);
         assert_eq!(storage.transactions[2].description, description3);
+    }
+
+    #[test]
+    fn test_to_bin_correct() {
+        let storage = Storage {
+            transactions: vec![
+                Transaction {
+                    tx_id: 1234567890123456,
+                    tx_type: TxType::Deposit,
+                    from_user_id: 0,
+                    to_user_id: 9876543210987654,
+                    amount: 10000,
+                    timestamp: 1633036800000,
+                    status: TxStatus::Success,
+                    description: "Terminal deposit".to_string(),
+                },
+                Transaction {
+                    tx_id: 2312321321321321,
+                    tx_type: TxType::Transfer,
+                    from_user_id: 1231231231231231,
+                    to_user_id: 9876543210987654,
+                    amount: 1000,
+                    timestamp: 1633056800000,
+                    status: TxStatus::Failure,
+                    description: "ATM withdrawal".to_string(),
+                },
+            ],
+        };
+
+        let mut buffer = Cursor::new(Vec::new());
+        storage
+            .to_bin(&mut buffer)
+            .expect("valid bin must be written");
+
+        let actual = buffer.into_inner();
+
+        let mut expected = Vec::new();
+
+        let desc1 = b"Terminal deposit";
+        let desc1_len = desc1.len() as u32;
+        let entity1_size = 46 + desc1_len;
+
+        expected.extend_from_slice(b"YPBN");
+        expected.extend_from_slice(&entity1_size.to_be_bytes());
+        expected.extend_from_slice(&1234567890123456u64.to_be_bytes());
+        expected.push(0);
+        expected.extend_from_slice(&0u64.to_be_bytes());
+        expected.extend_from_slice(&9876543210987654u64.to_be_bytes());
+        expected.extend_from_slice(&10000u64.to_be_bytes());
+        expected.extend_from_slice(&1633036800000u64.to_be_bytes());
+        expected.push(0);
+        expected.extend_from_slice(&desc1_len.to_be_bytes());
+        expected.extend_from_slice(desc1);
+
+        let desc2 = b"ATM withdrawal";
+        let desc2_len = desc2.len() as u32;
+        let entity2_size = 46 + desc2_len;
+
+        expected.extend_from_slice(b"YPBN");
+        expected.extend_from_slice(&entity2_size.to_be_bytes());
+        expected.extend_from_slice(&2312321321321321u64.to_be_bytes());
+        expected.push(1);
+        expected.extend_from_slice(&1231231231231231u64.to_be_bytes());
+        expected.extend_from_slice(&9876543210987654u64.to_be_bytes());
+        expected.extend_from_slice(&1000u64.to_be_bytes());
+        expected.extend_from_slice(&1633056800000u64.to_be_bytes());
+        expected.push(1);
+        expected.extend_from_slice(&desc2_len.to_be_bytes());
+        expected.extend_from_slice(desc2);
+
+        assert_eq!(actual, expected);
     }
 }
