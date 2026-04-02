@@ -7,6 +7,8 @@ pub enum ParseError {
     WrongDelimeterFormat,
     WrongFieldName(String),
     MissingField(String),
+    UnexpectedEOF(String),
+    InvalidDescriptionEncoding,
 }
 
 impl From<std::num::ParseIntError> for ParseError {
@@ -36,6 +38,11 @@ impl std::fmt::Display for ParseError {
                 "error with parsing a transaction text block, encountered an unknown name {n}"
             ),
             Self::MissingField(n) => write!(f, "field {n} is missing"),
+            Self::UnexpectedEOF(s) => write!(f, "while reading a binary, encountered {s}"),
+            Self::InvalidDescriptionEncoding => write!(
+                f,
+                "while processing the binary description an error was encountered"
+            ),
         }
     }
 }

@@ -42,7 +42,7 @@ impl Storage {
 
     pub fn to_txt(&self, writer: &mut impl std::io::Write) -> Result<(), TxtError> {
         let mut iter = self.transactions.iter().peekable();
-        
+
         while let Some(tx) = iter.next() {
             writeln!(
                 writer,
