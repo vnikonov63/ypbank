@@ -27,7 +27,6 @@ impl Storage {
                     magic.iter().map(|&b| b as char).collect::<String>(),
                 ));
             }
-            let entity_size_bin = &header[4..8];
             let entity_size = u32::from_be_bytes([header[4], header[5], header[6], header[7]]);
 
             entity.resize(entity_size as usize, 0);
@@ -193,4 +192,114 @@ mod tests {
     fn test_parse_bin_entity_too_small() {
         todo!()
     } */
+
+    #[test]
+    fn test_from_bin_correct() {
+        let magic = b"YPBN";
+        let mut bytes = Vec::new();
+
+        let header1: u32 = 74;
+        let tx_id1: u64 = 1001;
+        let tx_type1: u8 = 0;
+        let from_user_id1: u64 = 0;
+        let to_user_id1: u64 = 501;
+        let amount1: u64 = 50000;
+        let timestamp1: u64 = 1672531200000;
+        let status1: u8 = 0;
+        let description1 = "This is a longer description";
+        let desc_len1: u32 = description1.len() as u32;
+
+        bytes.extend_from_slice(magic);
+        bytes.extend_from_slice(&header1.to_be_bytes());
+        bytes.extend_from_slice(&tx_id1.to_be_bytes());
+        bytes.push(tx_type1);
+        bytes.extend_from_slice(&from_user_id1.to_be_bytes());
+        bytes.extend_from_slice(&to_user_id1.to_be_bytes());
+        bytes.extend_from_slice(&amount1.to_be_bytes());
+        bytes.extend_from_slice(&timestamp1.to_be_bytes());
+        bytes.push(status1);
+        bytes.extend_from_slice(&desc_len1.to_be_bytes());
+        bytes.extend_from_slice(description1.as_bytes());
+
+        let header2: u32 = 63;
+        let tx_id2: u64 = 1001;
+        let tx_type2: u8 = 0;
+        let from_user_id2: u64 = 0;
+        let to_user_id2: u64 = 501;
+        let amount2: u64 = 50000;
+        let timestamp2: u64 = 1672531200000;
+        let status2: u8 = 0;
+        let description2 = "short description";
+        let desc_len2: u32 = description2.len() as u32;
+
+        bytes.extend_from_slice(magic);
+        bytes.extend_from_slice(&header2.to_be_bytes());
+        bytes.extend_from_slice(&tx_id2.to_be_bytes());
+        bytes.push(tx_type2);
+        bytes.extend_from_slice(&from_user_id2.to_be_bytes());
+        bytes.extend_from_slice(&to_user_id2.to_be_bytes());
+        bytes.extend_from_slice(&amount2.to_be_bytes());
+        bytes.extend_from_slice(&timestamp2.to_be_bytes());
+        bytes.push(status2);
+        bytes.extend_from_slice(&desc_len2.to_be_bytes());
+        bytes.extend_from_slice(description2.as_bytes());
+
+        let header3: u32 = 143;
+        let tx_id3: u64 = 1001;
+        let tx_type3: u8 = 0;
+        let from_user_id3: u64 = 0;
+        let to_user_id3: u64 = 501;
+        let amount3: u64 = 50000;
+        let timestamp3: u64 = 1672531200000;
+        let status3: u8 = 0;
+        let description3 = "Alice, I was running around the city and I decided to come in and check out that coffee place....";
+        let desc_len3: u32 = description3.len() as u32;
+
+        bytes.extend_from_slice(magic);
+        bytes.extend_from_slice(&header3.to_be_bytes());
+        bytes.extend_from_slice(&tx_id3.to_be_bytes());
+        bytes.push(tx_type3);
+        bytes.extend_from_slice(&from_user_id3.to_be_bytes());
+        bytes.extend_from_slice(&to_user_id3.to_be_bytes());
+        bytes.extend_from_slice(&amount3.to_be_bytes());
+        bytes.extend_from_slice(&timestamp3.to_be_bytes());
+        bytes.push(status3);
+        bytes.extend_from_slice(&desc_len3.to_be_bytes());
+        bytes.extend_from_slice(description3.as_bytes());
+
+        let mut buffer = Cursor::new(bytes);
+
+        buffer.set_position(0);
+
+        let storage = Storage::from_bin(&mut buffer).expect("valid bin should be read");
+
+        assert_eq!(storage.transactions.len(), 3);
+
+        assert_eq!(storage.transactions[0].tx_id, tx_id1);
+        assert_eq!(storage.transactions[0].tx_type, TxType::Deposit);
+        assert_eq!(storage.transactions[0].from_user_id, from_user_id1);
+        assert_eq!(storage.transactions[0].to_user_id, to_user_id1);
+        assert_eq!(storage.transactions[0].amount, amount1);
+        assert_eq!(storage.transactions[0].timestamp, timestamp1);
+        assert_eq!(storage.transactions[0].status, TxStatus::Success);
+        assert_eq!(storage.transactions[0].description, description1);
+
+        assert_eq!(storage.transactions[1].tx_id, tx_id2);
+        assert_eq!(storage.transactions[1].tx_type, TxType::Deposit);
+        assert_eq!(storage.transactions[1].from_user_id, from_user_id2);
+        assert_eq!(storage.transactions[1].to_user_id, to_user_id2);
+        assert_eq!(storage.transactions[1].amount, amount2);
+        assert_eq!(storage.transactions[1].timestamp, timestamp2);
+        assert_eq!(storage.transactions[1].status, TxStatus::Success);
+        assert_eq!(storage.transactions[1].description, description2);
+
+        assert_eq!(storage.transactions[2].tx_id, tx_id3);
+        assert_eq!(storage.transactions[2].tx_type, TxType::Deposit);
+        assert_eq!(storage.transactions[2].from_user_id, from_user_id3);
+        assert_eq!(storage.transactions[2].to_user_id, to_user_id3);
+        assert_eq!(storage.transactions[2].amount, amount3);
+        assert_eq!(storage.transactions[2].timestamp, timestamp3);
+        assert_eq!(storage.transactions[2].status, TxStatus::Success);
+        assert_eq!(storage.transactions[2].description, description3);
+    }
 }
