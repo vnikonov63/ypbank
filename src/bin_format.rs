@@ -13,9 +13,8 @@ impl Storage {
     }
 }
 
-pub fn parse_bin_entity(entity: &[u8], entity_size: u32) -> Result<Transaction, ParseError> {
+pub fn parse_bin_entity(entity: &[u8]) -> Result<Transaction, ParseError> {
     struct Offsets;
-
     impl Offsets {
         const TX_ID: usize = 0;
         const TX_TYPE: usize = 8;
@@ -26,6 +25,10 @@ pub fn parse_bin_entity(entity: &[u8], entity_size: u32) -> Result<Transaction, 
         const STATUS: usize = 41;
         const DESC_LEN: usize = 42;
         const DESC: usize = 46;
+    }
+
+    if entity.len() < 46 {
+        return Err(ParseError::EntityTooSmallToBeValid(entity.len()));
     }
 
     let tx_id = read8bytes(entity, Offsets::TX_ID, "TX_ID")?;
@@ -42,7 +45,7 @@ pub fn parse_bin_entity(entity: &[u8], entity_size: u32) -> Result<Transaction, 
     let desc_start = Offsets::DESC;
     let desc_end = desc_start + desc_len as usize;
     if entity.len() < desc_end as usize {
-        return Err(ParseError::InvalidDescriptionEncoding);
+        return Err(ParseError::UnexpectedEOF("DESCRIPTION".to_string()));
     }
 
     let description_bytes = &entity[desc_start..desc_end];
@@ -107,4 +110,56 @@ fn parse_fx_status_bin(s: u8) -> Result<TxStatus, ParseError> {
         2 => Ok(TxStatus::Pending),
         _ => Err(ParseError::InvalidTxStatus(s.to_string())),
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{Cursor, Write};
+
+    #[test]
+    fn test_parse_bin_entity_correct() {
+        let mut entity = Vec::new();
+
+        let tx_id: u64 = 1001;
+        let tx_type: u8 = 0;
+        let from_user_id: u64 = 0;
+        let to_user_id: u64 = 501;
+        let amount: u64 = 50000;
+        let timestamp: u64 = 1672531200000;
+        let status: u8 = 0;
+        let description = "Initial account funding";
+        let desc_len: u32 = description.len() as u32;
+
+        entity.extend_from_slice(&tx_id.to_be_bytes());
+        entity.push(tx_type);
+        entity.extend_from_slice(&from_user_id.to_be_bytes());
+        entity.extend_from_slice(&to_user_id.to_be_bytes());
+        entity.extend_from_slice(&amount.to_be_bytes());
+        entity.extend_from_slice(&timestamp.to_be_bytes());
+        entity.push(status);
+        entity.extend_from_slice(&desc_len.to_be_bytes());
+        entity.extend_from_slice(description.as_bytes());
+
+        let tx = parse_bin_entity(&entity).unwrap();
+
+        assert_eq!(tx.tx_id, tx_id);
+        assert_eq!(tx.tx_type, TxType::Deposit);
+        assert_eq!(tx.from_user_id, from_user_id);
+        assert_eq!(tx.to_user_id, to_user_id);
+        assert_eq!(tx.amount, amount);
+        assert_eq!(tx.timestamp, timestamp);
+        assert_eq!(tx.status, TxStatus::Success);
+        assert_eq!(tx.description, description.to_string());
+    }
+
+    /* #[test]
+    fn test_parse_bin_entity_description_non_utf8() {
+        todo!()
+    }
+
+    #[test]
+    fn test_parse_bin_entity_too_small() {
+        todo!()
+    } */
 }

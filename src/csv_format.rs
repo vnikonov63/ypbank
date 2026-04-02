@@ -81,7 +81,7 @@ pub fn parse_csv_line(line: &str) -> Result<Transaction, ParseError> {
 mod tests {
 
     use super::*;
-    use std::io::{Cursor, Read, Write};
+    use std::io::{Cursor, Write};
 
     #[test]
     fn test_parse_one_csv_line_correct() {

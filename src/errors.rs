@@ -9,6 +9,8 @@ pub enum ParseError {
     MissingField(String),
     UnexpectedEOF(String),
     InvalidDescriptionEncoding,
+    EntityTooSmallToBeValid(usize),
+    HeaderTooSmallToBeValid(usize),
 }
 
 impl From<std::num::ParseIntError> for ParseError {
@@ -43,6 +45,12 @@ impl std::fmt::Display for ParseError {
                 f,
                 "while processing the binary description an error was encountered"
             ),
+            Self::EntityTooSmallToBeValid(s) => {
+                write!(f, "binary entity must be at least 46 bytes long")
+            }
+            Self::HeaderTooSmallToBeValid(s) => {
+                write!(f, "binary header must be at least 8 bytes long")
+            }
         }
     }
 }
