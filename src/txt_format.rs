@@ -4,7 +4,7 @@ use crate::errors::{ParseError, TxtError};
 use crate::{Storage, Transaction, TxStatus, TxType, parse_tx_status, parse_tx_type};
 
 impl Storage {
-    pub fn from_txt<R: std::io::Read>(reader: &mut R) -> Result<Self, TxtError> {
+    pub fn from_txt(reader: &mut impl std::io::Read) -> Result<Self, TxtError> {
         let mut transactions = Vec::new();
         let f = BufReader::new(reader);
 
@@ -40,8 +40,30 @@ impl Storage {
         Ok(Self { transactions })
     }
 
-    pub fn to_txt<W: std::io::Write>(&self, writer: &mut W) -> Result<Self, TxtError> {
-        todo!()
+    pub fn to_txt(&self, writer: &mut impl std::io::Write) -> Result<(), TxtError> {
+        let mut iter = self.transactions.iter().peekable();
+        
+        while let Some(tx) = iter.next() {
+            writeln!(
+                writer,
+                "TX_ID: {}\nTX_TYPE: {}\nFROM_USER_ID: {}\nTO_USER_ID: {}\nAMOUNT: {}\nTIMESTAMP: {}\nSTATUS: {}\nDESCRIPTION: \"{}\"",
+                tx.tx_id,
+                tx.tx_type,
+                tx.from_user_id,
+                tx.to_user_id,
+                tx.amount,
+                tx.timestamp,
+                tx.status,
+                tx.description
+            )?;
+
+            if iter.peek().is_some() {
+                writeln!(writer)?;
+            }
+        }
+
+        writer.flush()?;
+        Ok(())
     }
 }
 
@@ -265,5 +287,60 @@ mod tests {
     }
 
     #[test]
-    fn test_to_txt_correct() {}
+    fn test_to_txt_correct() {
+        let storage = Storage {
+            transactions: vec![
+                Transaction {
+                    tx_id: 1234567890123456,
+                    tx_type: TxType::Deposit,
+                    from_user_id: 0,
+                    to_user_id: 9876543210987654,
+                    amount: 10000,
+                    timestamp: 1633036800000,
+                    status: TxStatus::Success,
+                    description: "Terminal deposit".to_string(),
+                },
+                Transaction {
+                    tx_id: 2312321321321321,
+                    tx_type: TxType::Transfer,
+                    from_user_id: 1231231231231231,
+                    to_user_id: 9876543210987654,
+                    amount: 1000,
+                    timestamp: 1633056800000,
+                    status: TxStatus::Failure,
+                    description: "ATM withdrawal".to_string(),
+                },
+            ],
+        };
+
+        let mut buffer = Cursor::new(Vec::new());
+        storage
+            .to_txt(&mut buffer)
+            .expect("valid CSV must be writen");
+
+        let bytes = buffer.into_inner();
+        let actual = String::from_utf8(bytes).expect("output must be valid utf-8");
+
+        let expected = concat!(
+            "TX_ID: 1234567890123456\n",
+            "TX_TYPE: DEPOSIT\n",
+            "FROM_USER_ID: 0\n",
+            "TO_USER_ID: 9876543210987654\n",
+            "AMOUNT: 10000\n",
+            "TIMESTAMP: 1633036800000\n",
+            "STATUS: SUCCESS\n",
+            "DESCRIPTION: \"Terminal deposit\"\n",
+            "\n",
+            "TX_ID: 2312321321321321\n",
+            "TX_TYPE: TRANSFER\n",
+            "FROM_USER_ID: 1231231231231231\n",
+            "TO_USER_ID: 9876543210987654\n",
+            "AMOUNT: 1000\n",
+            "TIMESTAMP: 1633056800000\n",
+            "STATUS: FAILURE\n",
+            "DESCRIPTION: \"ATM withdrawal\"\n",
+        );
+
+        assert_eq!(actual, expected);
+    }
 }
