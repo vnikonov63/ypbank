@@ -11,6 +11,7 @@ pub enum ParseError {
     InvalidDescriptionEncoding,
     EntityTooSmallToBeValid(usize),
     HeaderTooSmallToBeValid(usize),
+    WrongFormat(String),
 }
 
 impl From<std::num::ParseIntError> for ParseError {
@@ -50,6 +51,9 @@ impl std::fmt::Display for ParseError {
             }
             Self::HeaderTooSmallToBeValid(s) => {
                 write!(f, "binary header must be at least 8 bytes long")
+            },
+            Self::WrongFormat(s) => {
+                write!(f, "unknown format type {s}")
             }
         }
     }

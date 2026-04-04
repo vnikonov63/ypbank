@@ -1,14 +1,51 @@
+use std::fs::File;
+use std::io::BufReader;
+
 use crate::errors::ParseError;
 
 pub mod bin_format;
 pub mod csv_format;
 pub mod errors;
 pub mod txt_format;
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Format {
+    Binary,
+    Csv,
+    Txt,
+}
+
+impl std::str::FromStr for Format {
+    type Err = ParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_ascii_lowercase().as_str() {
+            "binary" => Ok(Format::Binary),
+            "csv" => Ok(Format::Csv),
+            "txt" => Ok(Format::Txt),
+            _ => Err(ParseError::WrongFormat(s.to_string()))
+        }
+    }
+}
+
+pub fn read_storage(path: &str, format: Format) -> Result<Storage, Box<dyn std::error::Error>> {
+    let file = File::open(path)?;
+    let mut reader = BufReader::new(file);
+
+    let storage = match format {
+        Format::Binary => Storage::from_bin(&mut reader)?,
+        Format::Csv => Storage::from_csv(&mut reader)?,
+        Format::Txt => Storage::from_txt(&mut reader)?,
+    };
+
+    Ok(storage)
+}
+
+#[derive(Debug, PartialEq)]
 pub struct Storage {
     pub transactions: Vec<Transaction>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Transaction {
     pub tx_id: u64,
     pub tx_type: TxType,

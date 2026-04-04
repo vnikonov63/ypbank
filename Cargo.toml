@@ -3,4 +3,13 @@ name = "ypbank"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "ypbank_compare"
+path = "src/bin/ypbank_compare.rs"
+
+[[bin]]
+name = "ypbank_converter"
+path = "src/bin/ypbank_converter.rs"
+
 [dependencies]
+clap = { version = "4.6.0", features = ["derive"] }
