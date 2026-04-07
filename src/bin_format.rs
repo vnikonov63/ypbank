@@ -188,7 +188,7 @@ fn tx_status_to_u8(s: TxStatus) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::{Cursor};
+    use std::io::Cursor;
 
     #[test]
     fn test_parse_bin_entity_correct() {
