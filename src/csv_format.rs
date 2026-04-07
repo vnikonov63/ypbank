@@ -87,7 +87,7 @@ mod tests {
     #[test]
     fn test_parse_one_csv_line_correct() {
         let line = r#"1001,DEPOSIT,0,501,50000,1672531200000,SUCCESS,"Initial account funding""#;
-        let tx = parse_csv_line(&line).expect("Valid CSV should pass");
+        let tx = parse_csv_line(line).expect("Valid CSV should pass");
 
         assert_eq!(tx.tx_id, 1001);
         assert_eq!(tx.tx_type, TxType::Deposit);
@@ -102,7 +102,7 @@ mod tests {
     #[test]
     fn test_parse_one_csv_line_tx_type_invalid() {
         let line = r#"1001,INVALID,0,501,50000,1672531200000,SUCCESS,"Initial account funding""#;
-        let tx = parse_csv_line(&line);
+        let tx = parse_csv_line(line);
 
         match tx {
             Err(ParseError::InvalidTxType(t)) => assert_eq!(t, "INVALID"),
@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn test_parse_one_csv_line_tx_status_invalid() {
         let line = r#"1001,DEPOSIT,0,501,50000,1672531200000,INVALID,"Initial account funding""#;
-        let tx = parse_csv_line(&line);
+        let tx = parse_csv_line(line);
 
         match tx {
             Err(ParseError::InvalidTxStatus(t)) => assert_eq!(t, "INVALID"),
@@ -124,7 +124,7 @@ mod tests {
     #[test]
     fn test_parse_one_csv_line_number_of_fields_invalid() {
         let line = "1001,DEPOSIT,0";
-        let tx = parse_csv_line(&line);
+        let tx = parse_csv_line(line);
 
         match tx {
             Err(ParseError::WrongFieldCount(n)) => assert_eq!(n, 3),

@@ -120,12 +120,12 @@ pub fn parse_txt_entity(lines: &Vec<&str>) -> Result<Transaction, ParseError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::{Cursor, Read, Write};
+    use std::io::{Cursor, Write};
 
     #[test]
     fn test_parse_text_line_correct() {
         let line = "TX_ID: 1234567890123456";
-        let tx = parse_txt_line(&line).expect("Valid Line should pass");
+        let tx = parse_txt_line(line).expect("Valid Line should pass");
 
         assert_eq!(tx.0, "TX_ID");
         assert_eq!(tx.1, "1234567890123456");
@@ -134,7 +134,7 @@ mod tests {
     #[test]
     fn test_parse_text_line_no_delimeter() {
         let line = "TX_ID 1234567890123456";
-        let tx = parse_txt_line(&line);
+        let tx = parse_txt_line(line);
 
         assert!(matches!(tx, Err(ParseError::WrongDelimeterFormat)));
     }
@@ -142,7 +142,7 @@ mod tests {
     #[test]
     fn test_parse_text_line_too_many_delimeters() {
         let line = "TX_ID: 123456789:0123456";
-        let tx = parse_txt_line(&line);
+        let tx = parse_txt_line(line);
 
         assert!(matches!(tx, Err(ParseError::WrongDelimeterFormat)));
     }
