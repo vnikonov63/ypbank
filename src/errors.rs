@@ -46,12 +46,12 @@ impl std::fmt::Display for ParseError {
                 f,
                 "while processing the binary description an error was encountered"
             ),
-            Self::EntityTooSmallToBeValid(s) => {
+            Self::EntityTooSmallToBeValid(_) => {
                 write!(f, "binary entity must be at least 46 bytes long")
             }
-            Self::HeaderTooSmallToBeValid(s) => {
+            Self::HeaderTooSmallToBeValid(_) => {
                 write!(f, "binary header must be at least 8 bytes long")
-            },
+            }
             Self::WrongFormat(s) => {
                 write!(f, "unknown format type {s}")
             }

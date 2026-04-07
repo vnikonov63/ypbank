@@ -1,7 +1,7 @@
 use std::io::{BufRead, BufReader};
 
 use crate::errors::{CSVError, ParseError};
-use crate::{Storage, Transaction, TxStatus, TxType, parse_tx_status, parse_tx_type};
+use crate::{Storage, Transaction, parse_tx_status, parse_tx_type};
 
 const CSV_HEADER: &str =
     "TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION";
@@ -81,6 +81,7 @@ pub fn parse_csv_line(line: &str) -> Result<Transaction, ParseError> {
 mod tests {
 
     use super::*;
+    use crate::{TxStatus, TxType};
     use std::io::{Cursor, Write};
 
     #[test]

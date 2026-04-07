@@ -1,6 +1,6 @@
 use clap::Parser;
-use ypbank::{read_storage, Format};
 use std::io;
+use ypbank::{Format, read_storage};
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -20,17 +20,15 @@ fn main() {
 
     let mut stdout = io::stdout();
 
-
-
     match args.output_format {
         Format::Binary => {
-            storage.to_bin(&mut stdout);
+            let _ = storage.to_bin(&mut stdout);
         }
         Format::Csv => {
-            storage.to_csv(&mut stdout);
+            let _ = storage.to_csv(&mut stdout);
         }
         Format::Txt => {
-            storage.to_txt(&mut stdout);
+            let _ = storage.to_txt(&mut stdout);
         }
     }
 }

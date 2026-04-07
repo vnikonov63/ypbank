@@ -17,7 +17,7 @@ impl Storage {
                     if err.kind() == ErrorKind::UnexpectedEof {
                         break;
                     }
-                    return Err(BinError::Io(err.into()));
+                    return Err(BinError::Io(err));
                 }
             }
 

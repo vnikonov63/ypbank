@@ -1,5 +1,5 @@
 use clap::Parser;
-use ypbank::{read_storage, Format};
+use ypbank::{Format, read_storage};
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -22,7 +22,10 @@ fn main() {
     let storage1 = read_storage(&args.file1, args.format1).unwrap();
     let storage2 = read_storage(&args.file2, args.format2).unwrap();
 
-    print!("# Output: The transaction records in '{}' and '{}' are ", &args.file1, &args.file2);
+    print!(
+        "# Output: The transaction records in '{}' and '{}' are ",
+        &args.file1, &args.file2
+    );
     if storage1 == storage2 {
         println!("identical");
     } else {

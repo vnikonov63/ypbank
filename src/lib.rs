@@ -22,7 +22,7 @@ impl std::str::FromStr for Format {
             "binary" => Ok(Format::Binary),
             "csv" => Ok(Format::Csv),
             "txt" => Ok(Format::Txt),
-            _ => Err(ParseError::WrongFormat(s.to_string()))
+            _ => Err(ParseError::WrongFormat(s.to_string())),
         }
     }
 }
