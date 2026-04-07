@@ -5,24 +5,24 @@ use std::io;
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(long)]
-    file1: String,
+    input: String,
 
     #[arg(long)]
-    format1: Format,
+    input_format: Format,
 
     #[arg(long)]
-    format2: Format,
+    output_format: Format,
 }
 
 fn main() {
     let args = Args::parse();
-    let storage = read_storage(&args.file1, args.format1).unwrap();
+    let storage = read_storage(&args.input, args.input_format).unwrap();
 
     let mut stdout = io::stdout();
 
 
 
-    match args.format2 {
+    match args.output_format {
         Format::Binary => {
             storage.to_bin(&mut stdout);
         }
