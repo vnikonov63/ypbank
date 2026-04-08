@@ -16,11 +16,11 @@ struct Args {
     format2: Format,
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>>{
     let args = Args::parse();
 
-    let storage1 = read_storage(&args.file1, args.format1).unwrap();
-    let storage2 = read_storage(&args.file2, args.format2).unwrap();
+    let storage1 = read_storage(&args.file1, args.format1)?;
+    let storage2 = read_storage(&args.file2, args.format2)?;
 
     print!(
         "# Output: The transaction records in '{}' and '{}' are ",
@@ -31,4 +31,6 @@ fn main() {
     } else {
         println!("not identical");
     }
+
+    Ok(())
 }

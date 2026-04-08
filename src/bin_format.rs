@@ -226,16 +226,6 @@ mod tests {
         assert_eq!(tx.description, description.to_string());
     }
 
-    /* #[test]
-    fn test_parse_bin_entity_description_non_utf8() {
-        todo!()
-    }
-
-    #[test]
-    fn test_parse_bin_entity_too_small() {
-        todo!()
-    } */
-
     #[test]
     fn test_from_bin_correct() {
         let magic = b"YPBN";

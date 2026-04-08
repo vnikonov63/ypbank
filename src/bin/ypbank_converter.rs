@@ -14,9 +14,9 @@ struct Args {
     output_format: Format,
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    let storage = read_storage(&args.input, args.input_format).unwrap();
+    let storage = read_storage(&args.input, args.input_format)?;
 
     let mut stdout = io::stdout();
 
@@ -31,4 +31,6 @@ fn main() {
             let _ = storage.to_txt(&mut stdout);
         }
     }
+
+    Ok(())
 }
