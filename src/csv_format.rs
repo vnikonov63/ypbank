@@ -7,11 +7,6 @@ const CSV_HEADER: &str =
     "TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION";
 
 impl Storage {
-    /* --------!!!IMPORTANT MEMORY MOMENT!!!----------
-    // this could be writen as
-    pub fn from_csv<R: std::io::Read>(reader: &mut R) -> Result<Self, CSVError>
-    // with Trait Bound Syntx and also using syntactic sugar as below */
-
     pub fn from_csv(reader: &mut impl std::io::Read) -> Result<Self, CSVError> {
         let mut transactions = Vec::new();
         let f = BufReader::new(reader);
@@ -78,16 +73,17 @@ pub fn parse_csv_line(line: &str) -> Result<Transaction, ParseError> {
 }
 
 #[cfg(test)]
-mod tests {
+mod csv_format_tests {
 
     use super::*;
     use crate::{TxStatus, TxType};
+    use std::error::Error;
     use std::io::{Cursor, Write};
 
     #[test]
-    fn test_parse_one_csv_line_correct() {
+    fn test_parse_one_csv_line_correct() -> Result<(), Box<dyn Error>> {
         let line = r#"1001,DEPOSIT,0,501,50000,1672531200000,SUCCESS,"Initial account funding""#;
-        let tx = parse_csv_line(line).expect("Valid CSV should pass");
+        let tx = parse_csv_line(line)?;
 
         assert_eq!(tx.tx_id, 1001);
         assert_eq!(tx.tx_type, TxType::Deposit);
@@ -97,6 +93,8 @@ mod tests {
         assert_eq!(tx.timestamp, 1672531200000);
         assert_eq!(tx.status, TxStatus::Success);
         assert_eq!(tx.description, "Initial account funding");
+
+        Ok(())
     }
 
     #[test]
@@ -142,45 +140,42 @@ mod tests {
     }
 
     #[test]
-    fn test_from_csv_wrong_header() {
+    fn test_from_csv_wrong_header() -> Result<(), Box<dyn Error>> {
         let mut buffer = Cursor::new(Vec::new());
-        writeln!(buffer, "TX_ID,TX_TYPE,FROM_USER_ID")
-            .expect("Should be able to write to a Cursor virtual stream");
+        writeln!(buffer, "TX_ID,TX_TYPE,FROM_USER_ID")?;
         writeln!(
             buffer,
             r#"1001,DEPOSIT,0,501,50000,1672531200000,SUCCESS,"Initial account funding""#
-        )
-        .unwrap();
+        )?;
 
         buffer.set_position(0);
 
         let storage = Storage::from_csv(&mut buffer);
 
         assert!(matches!(storage, Err(CSVError::InvalidHeader)));
+
+        Ok(())
     }
 
     #[test]
-    fn test_from_csv_correct() {
+    fn test_from_csv_correct() -> Result<(), Box<dyn Error>> {
         let mut buffer = Cursor::new(Vec::new());
         writeln!(
             buffer,
             "TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION"
-        )
-        .expect("Should be able to write to a Cursor virtual stream");
+        )?;
         writeln!(
             buffer,
             r#"1001,DEPOSIT,0,501,50000,1672531200000,SUCCESS,"Initial account funding""#
-        )
-        .unwrap();
+        )?;
         writeln!(
             buffer,
             r#"1003,WITHDRAWAL,502,0,1000,1672538400000,PENDING,"ATM withdrawal""#
-        )
-        .unwrap();
+        )?;
 
         buffer.set_position(0);
 
-        let storage = Storage::from_csv(&mut buffer).expect("valid CSV must be read");
+        let storage = Storage::from_csv(&mut buffer)?;
 
         assert_eq!(storage.transactions.len(), 2);
 
@@ -203,10 +198,12 @@ mod tests {
         assert_eq!(tx2.timestamp, 1672538400000);
         assert_eq!(tx2.status, TxStatus::Pending);
         assert_eq!(tx2.description, "ATM withdrawal");
+
+        Ok(())
     }
 
     #[test]
-    fn test_to_csv_correct() {
+    fn test_to_csv_correct() -> Result<(), Box<dyn Error>> {
         let storage = Storage {
             transactions: vec![
                 Transaction {
@@ -233,12 +230,10 @@ mod tests {
         };
 
         let mut buffer = Cursor::new(Vec::new());
-        storage
-            .to_csv(&mut buffer)
-            .expect("valid CSV must be writen");
+        storage.to_csv(&mut buffer)?;
 
         let bytes = buffer.into_inner();
-        let actual = String::from_utf8(bytes).expect("output must be valid utf-8");
+        let actual = String::from_utf8(bytes)?;
 
         let expected = concat!(
             "TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION\n",
@@ -247,5 +242,7 @@ mod tests {
         );
 
         assert_eq!(actual, expected);
+
+        Ok(())
     }
 }

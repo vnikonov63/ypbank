@@ -186,12 +186,13 @@ fn tx_status_to_u8(s: TxStatus) -> u8 {
 }
 
 #[cfg(test)]
-mod tests {
+mod bin_format_tests {
     use super::*;
+    use std::error::Error;
     use std::io::Cursor;
 
     #[test]
-    fn test_parse_bin_entity_correct() {
+    fn test_parse_bin_entity_correct() -> Result<(), Box<dyn Error>> {
         let mut entity = Vec::new();
 
         let tx_id: u64 = 1001;
@@ -214,7 +215,7 @@ mod tests {
         entity.extend_from_slice(&desc_len.to_be_bytes());
         entity.extend_from_slice(description.as_bytes());
 
-        let tx = parse_bin_entity(&entity).unwrap();
+        let tx = parse_bin_entity(&entity)?;
 
         assert_eq!(tx.tx_id, tx_id);
         assert_eq!(tx.tx_type, TxType::Deposit);
@@ -224,10 +225,12 @@ mod tests {
         assert_eq!(tx.timestamp, timestamp);
         assert_eq!(tx.status, TxStatus::Success);
         assert_eq!(tx.description, description.to_string());
+
+        Ok(())
     }
 
     #[test]
-    fn test_from_bin_correct() {
+    fn test_from_bin_correct() -> Result<(), Box<dyn Error>> {
         let magic = b"YPBN";
         let mut bytes = Vec::new();
 
@@ -304,7 +307,7 @@ mod tests {
 
         buffer.set_position(0);
 
-        let storage = Storage::from_bin(&mut buffer).expect("valid bin should be read");
+        let storage = Storage::from_bin(&mut buffer)?;
 
         assert_eq!(storage.transactions.len(), 3);
 
@@ -334,10 +337,12 @@ mod tests {
         assert_eq!(storage.transactions[2].timestamp, timestamp3);
         assert_eq!(storage.transactions[2].status, TxStatus::Success);
         assert_eq!(storage.transactions[2].description, description3);
+
+        Ok(())
     }
 
     #[test]
-    fn test_to_bin_correct() {
+    fn test_to_bin_correct() -> Result<(), Box<dyn Error>> {
         let storage = Storage {
             transactions: vec![
                 Transaction {
@@ -364,9 +369,7 @@ mod tests {
         };
 
         let mut buffer = Cursor::new(Vec::new());
-        storage
-            .to_bin(&mut buffer)
-            .expect("valid bin must be written");
+        storage.to_bin(&mut buffer)?;
 
         let actual = buffer.into_inner();
 
@@ -405,5 +408,7 @@ mod tests {
         expected.extend_from_slice(desc2);
 
         assert_eq!(actual, expected);
+
+        Ok(())
     }
 }

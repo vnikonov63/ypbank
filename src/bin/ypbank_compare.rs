@@ -16,7 +16,7 @@ struct Args {
     format2: Format,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>>{
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     let storage1 = read_storage(&args.file1, args.format1)?;

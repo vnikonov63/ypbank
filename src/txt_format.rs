@@ -118,17 +118,20 @@ pub fn parse_txt_entity(lines: &Vec<&str>) -> Result<Transaction, ParseError> {
 }
 
 #[cfg(test)]
-mod tests {
+mod txt_format_tests {
     use super::*;
+    use std::error::Error;
     use std::io::{Cursor, Write};
 
     #[test]
-    fn test_parse_text_line_correct() {
+    fn test_parse_text_line_correct() -> Result<(), Box<dyn Error>> {
         let line = "TX_ID: 1234567890123456";
-        let tx = parse_txt_line(line).expect("Valid Line should pass");
+        let tx = parse_txt_line(line)?;
 
         assert_eq!(tx.0, "TX_ID");
         assert_eq!(tx.1, "1234567890123456");
+
+        Ok(())
     }
 
     #[test]
@@ -148,7 +151,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_txt_entity_correct() {
+    fn test_parse_txt_entity_correct() -> Result<(), Box<dyn Error>> {
         let input: Vec<&str> = vec![
             "# Record 1 (Deposit)",
             "STATUS: SUCCESS",
@@ -161,7 +164,7 @@ mod tests {
             "TX_TYPE: DEPOSIT",
         ];
 
-        let tx = parse_txt_entity(&input).expect("Valid entity should be parsed");
+        let tx = parse_txt_entity(&input)?;
         assert_eq!(tx.tx_id, 1234567890123456);
         assert_eq!(tx.tx_type, TxType::Deposit);
         assert_eq!(tx.from_user_id, 0);
@@ -170,6 +173,8 @@ mod tests {
         assert_eq!(tx.timestamp, 1633036800000);
         assert_eq!(tx.status, TxStatus::Success);
         assert_eq!(tx.description, "Terminal deposit");
+
+        Ok(())
     }
 
     #[test]
@@ -212,7 +217,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_txt_correct() {
+    fn test_from_txt_correct() -> Result<(), Box<dyn Error>> {
         let mut buffer = Cursor::new(Vec::new());
 
         let s = concat!(
@@ -247,11 +252,11 @@ mod tests {
             "DESCRIPTION: \"User withdrawal\"\n",
         );
 
-        write!(buffer, "{}", s).unwrap();
+        write!(buffer, "{}", s)?;
 
         buffer.set_position(0);
 
-        let storage = Storage::from_txt(&mut buffer).expect("valid text should be read");
+        let storage = Storage::from_txt(&mut buffer)?;
 
         assert_eq!(storage.transactions.len(), 3);
 
@@ -284,10 +289,12 @@ mod tests {
         assert_eq!(tx3.timestamp, 1633066800000);
         assert_eq!(tx3.status, TxStatus::Success);
         assert_eq!(tx3.description, "User withdrawal");
+
+        Ok(())
     }
 
     #[test]
-    fn test_to_txt_correct() {
+    fn test_to_txt_correct() -> Result<(), Box<dyn Error>> {
         let storage = Storage {
             transactions: vec![
                 Transaction {
@@ -314,12 +321,10 @@ mod tests {
         };
 
         let mut buffer = Cursor::new(Vec::new());
-        storage
-            .to_txt(&mut buffer)
-            .expect("valid CSV must be writen");
+        storage.to_txt(&mut buffer)?;
 
         let bytes = buffer.into_inner();
-        let actual = String::from_utf8(bytes).expect("output must be valid utf-8");
+        let actual = String::from_utf8(bytes)?;
 
         let expected = concat!(
             "TX_ID: 1234567890123456\n",
@@ -342,5 +347,7 @@ mod tests {
         );
 
         assert_eq!(actual, expected);
+
+        Ok(())
     }
 }
