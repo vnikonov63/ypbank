@@ -4,6 +4,32 @@ use crate::errors::{ParseError, TxtError};
 use crate::{Storage, Transaction, TxStatus, TxType, parse_tx_status, parse_tx_type};
 
 impl Storage {
+    /// Reads a `Storage` from a plain text reader.
+    ///
+    /// Each transaction is represented as a block of lines with `KEY: VALUE` pairs.
+    /// Lines starting with `#` are ignored. Empty lines separate transaction blocks.
+    ///
+    /// ## Arguments
+    ///
+    /// * `reader` - Any type implementing `std::io::Read`.
+    ///
+    /// ## Returns
+    ///
+    /// Returns `Ok(Storage)` if all blocks are successfully parsed.
+    /// Returns `Err(TxtError)` if there are double empty lines between blocks, malformed fields,
+    /// or any IO error occurs.
+    ///
+    /// ## Examples
+    ///
+    /// ```no_run
+    /// use std::io::Cursor;
+    /// use ypbank::{Storage, TxType, TxStatus};
+    ///
+    /// let data = "TX_ID: 1\nTX_TYPE: DEPOSIT\nFROM_USER_ID: 0\nTO_USER_ID: 100\nAMOUNT: 5000\nTIMESTAMP: 1672531200000\nSTATUS: Success\nDESCRIPTION: \"Initial deposit\"";
+    /// let mut reader = Cursor::new(data);
+    /// let storage = Storage::from_txt(&mut reader).unwrap();
+    /// assert_eq!(storage.transactions.len(), 1);
+    /// ```
     pub fn from_txt(reader: &mut impl std::io::Read) -> Result<Self, TxtError> {
         let mut transactions = Vec::new();
         let f = BufReader::new(reader);
@@ -40,6 +66,30 @@ impl Storage {
         Ok(Self { transactions })
     }
 
+    /// Writes `Storage` to a plain text writer.
+    ///
+    /// Each transaction is written as a block of lines with `KEY: VALUE` pairs.
+    /// Blocks are separated by a blank line.
+    ///
+    /// ## Arguments
+    ///
+    /// * `writer` - Any type implementing `std::io::Write`.
+    ///
+    /// ## Returns
+    ///
+    /// Returns `Ok(())` if the storage is successfully serialized.
+    /// Returns `Err(TxtError)` if any IO error occurs during writing.
+    ///
+    /// ## Examples
+    ///
+    /// ```no_run
+    /// use std::io::Cursor;
+    /// use ypbank::{Storage, Transaction, TxType, TxStatus};
+    ///
+    /// let storage = Storage { transactions: vec![] };
+    /// let mut writer = Cursor::new(Vec::new());
+    /// storage.to_txt(&mut writer).unwrap();
+    /// ```
     pub fn to_txt(&self, writer: &mut impl std::io::Write) -> Result<(), TxtError> {
         let mut iter = self.transactions.iter().peekable();
 
@@ -67,7 +117,7 @@ impl Storage {
     }
 }
 
-pub fn parse_txt_line(line: &str) -> Result<(&str, &str), ParseError> {
+fn parse_txt_line(line: &str) -> Result<(&str, &str), ParseError> {
     let mut it = line.split(':');
     match (it.next(), it.next(), it.next()) {
         (Some(a), Some(b), None) if !a.is_empty() && !b.is_empty() => Ok((a.trim(), b.trim())),
@@ -75,7 +125,7 @@ pub fn parse_txt_line(line: &str) -> Result<(&str, &str), ParseError> {
     }
 }
 
-pub fn parse_txt_entity(lines: &Vec<&str>) -> Result<Transaction, ParseError> {
+fn parse_txt_entity(lines: &Vec<&str>) -> Result<Transaction, ParseError> {
     let mut tx_id: Option<u64> = None;
     let mut tx_type: Option<TxType> = None;
     let mut from_user_id: Option<u64> = None;

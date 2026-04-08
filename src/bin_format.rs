@@ -4,6 +4,33 @@ use crate::errors::{BinError, ParseError};
 use crate::{Storage, Transaction, TxStatus, TxType};
 
 impl Storage {
+    /// Reads a `Storage` from a binary reader.
+    ///
+    /// The binary format is structured as a sequence of "entities", each with:
+    /// * A 4-byte magic header (`YPBN`).
+    /// * A 4-byte big-endian entity size.
+    /// * The entity data representing a single transaction.
+    ///
+    /// ## Arguments
+    ///
+    /// * `reader` - Any type implementing `std::io::Read`.
+    ///
+    /// ## Returns
+    ///
+    /// Returns `Ok(Storage)` if all entities are successfully parsed.
+    /// Returns `Err(BinError)` if the file is invalid, contains a wrong magic number,
+    /// if there is an unexpected EOF, or any other IO or parsing error occurs.
+    ///
+    /// ## Examples
+    ///
+    /// ```no_run
+    /// use std::fs::File;
+    /// use ypbank::{Storage, Format};
+    ///
+    /// let file = File::open("transactions.bin").unwrap();
+    /// let storage = Storage::from_bin(&mut std::io::BufReader::new(file)).unwrap();
+    /// println!("Loaded {} transactions", storage.transactions.len());
+    /// ```
     pub fn from_bin(reader: &mut impl std::io::Read) -> Result<Self, BinError> {
         let mut transactions = Vec::new();
         let mut entity = Vec::new();
@@ -38,6 +65,29 @@ impl Storage {
         Ok(Self { transactions })
     }
 
+    /// Writes `Storage` to a binary reader.
+    ///
+    /// Each transaction is written with the same binary format that is expected by `from_bin`
+    ///
+    /// ## Arguments
+    ///
+    /// * `writer` - Any type implementing `std::io::Write`.
+    ///
+    /// ## Returns
+    ///
+    /// Returns `Ok(())` if the storage is successfully serialized.
+    /// Returns `Err(BinError)` if there is an IO error during writing.
+    ///
+    /// ## Examples
+    ///
+    /// ```no_run
+    /// use std::fs::File;
+    /// use ypbank::{Storage};
+    ///
+    /// let storage = Storage { transactions: vec![] };
+    /// let mut file = File::create("output.bin").unwrap();
+    /// storage.to_bin(&mut file).unwrap();
+    /// ```
     pub fn to_bin(&self, writer: &mut impl std::io::Write) -> Result<(), BinError> {
         for tx in &self.transactions {
             let tx_id = tx.tx_id;
@@ -70,7 +120,7 @@ impl Storage {
     }
 }
 
-pub fn parse_bin_entity(entity: &[u8]) -> Result<Transaction, ParseError> {
+fn parse_bin_entity(entity: &[u8]) -> Result<Transaction, ParseError> {
     struct Offsets;
     impl Offsets {
         const TX_ID: usize = 0;

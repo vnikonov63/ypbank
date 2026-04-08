@@ -3,10 +3,38 @@ use std::io::{BufRead, BufReader};
 use crate::errors::{CSVError, ParseError};
 use crate::{Storage, Transaction, parse_tx_status, parse_tx_type};
 
-const CSV_HEADER: &str =
+/// A Header and every csv file should start with one
+/// Should be exactly: `TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION`
+pub const CSV_HEADER: &str =
     "TX_ID,TX_TYPE,FROM_USER_ID,TO_USER_ID,AMOUNT,TIMESTAMP,STATUS,DESCRIPTION";
 
 impl Storage {
+    /// Reads a `Storage` from a CSV reader.
+    ///
+    /// The CSV format is expected to have a header line matching `CSV_HEADER` and one line per transaction.
+    /// Empty lines are skipped, and the header is validated.
+    ///
+    /// ## Arguments
+    ///
+    /// * `reader` - Any type implementing `std::io::Read`.
+    ///
+    /// ## Returns
+    ///
+    /// Returns `Ok(Storage)` if all lines are successfully parsed.
+    /// Returns `Err(CSVError)` if the header is invalid, a line is malformed, or any IO error occurs.
+    ///
+    /// ## Examples
+    ///
+    /// ```no_run
+    /// use std::io::Cursor;
+    /// use ypbank::{Storage};
+    /// use ypbank::csv_format::CSV_HEADER;
+    ///
+    /// let data = format!("{CSV_HEADER}\n1,DEPOSIT,0,100,5000,1672531200000,Success,\"Initial deposit\"");
+    /// let mut reader = Cursor::new(data);
+    /// let storage = Storage::from_csv(&mut reader).unwrap();
+    /// assert_eq!(storage.transactions.len(), 1);
+    /// ```
     pub fn from_csv(reader: &mut impl std::io::Read) -> Result<Self, CSVError> {
         let mut transactions = Vec::new();
         let f = BufReader::new(reader);
@@ -31,6 +59,29 @@ impl Storage {
         Ok(Self { transactions })
     }
 
+    /// Writes `Storage` to a CSV writer.
+    ///
+    /// The first line is the CSV header (`CSV_HEADER`), followed by one line per transaction.
+    ///
+    /// ## Arguments
+    ///
+    /// * `writer` - Any type implementing `std::io::Write`.
+    ///
+    /// ## Returns
+    ///
+    /// Returns `Ok(())` if the storage is successfully serialized.
+    /// Returns `Err(CSVError)` if any IO error occurs during writing.
+    ///
+    /// ## Examples
+    ///
+    /// ```no_run
+    /// use std::io::Cursor;
+    /// use ypbank::{Storage, TxType, Transaction, TxStatus};
+    ///
+    /// let storage = Storage { transactions: vec![] };
+    /// let mut writer = Cursor::new(Vec::new());
+    /// storage.to_csv(&mut writer).unwrap();
+    /// ```
     pub fn to_csv<W: std::io::Write>(&self, writer: &mut W) -> Result<(), CSVError> {
         writeln!(writer, "{CSV_HEADER}")?;
         for tx in &self.transactions {
@@ -52,7 +103,7 @@ impl Storage {
     }
 }
 
-pub fn parse_csv_line(line: &str) -> Result<Transaction, ParseError> {
+fn parse_csv_line(line: &str) -> Result<Transaction, ParseError> {
     let bits: Vec<&str> = line.split(',').collect();
     if bits.len() != 8 {
         return Err(ParseError::WrongFieldCount(bits.len() as u8));
